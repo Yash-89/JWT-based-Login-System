@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
+import userRoutes from './routes/user.routes';
 
 dotenv.config();
 
@@ -13,6 +14,8 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use('/api/v1/users', userRoutes);
 
 try {
     const PORT = process.env.PORT || 5000;

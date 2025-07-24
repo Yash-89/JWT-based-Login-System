@@ -3,6 +3,6 @@ import { Router } from "express";
 
 const router = Router();
 
-router.patch('/api/register').post(registerUser);
+router.route('/register').post(registerUser);
 
 export default router;

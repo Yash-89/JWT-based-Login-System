@@ -2,6 +2,23 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/user.model.js';
 import response from '../utils/ApiResponse.js';
 
+const generateTokens = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+    
+        const accessToken = user.createAccessToken();
+        const refreshToken = user.createRefreshToken();
+    
+        user.refreshToken = refreshToken;
+        await user.save({ validateBeforeSave: false });
+    
+        return { accessToken, refreshToken };
+    
+    } catch (error) {
+        return response(res, 500, { error })
+    }
+}
+
 export const registerUser = async (req, res) => {
     // Extract user data from request body
     // Validate all the fields
@@ -79,8 +96,7 @@ export const loginUser = async (req, res) => {
     if (!isPasswordValid)
         return response(res, 409, { message: "Incorrect Password" });
 
-    const accessToken = await user.createAccessToken();
-    const refreshToken = await user.createRefreshToken();
+    const { accessToken, refreshToken } = await generateTokens(user._id);
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 

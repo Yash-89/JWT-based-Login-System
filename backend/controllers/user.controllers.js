@@ -10,9 +10,12 @@ export const registerUser = async (req, res) => {
     // Check if User is created successfully
     // Return response
 
-    const { username, email, password } = req.body;
+    const cleanInput = value => typeof value === "string" ? value.trim() : "";
+    const username = cleanInput(req.body.username).toLowerCase();
+    const email = cleanInput(req.body.email).toLowerCase();
+    const password = cleanInput(req.body.password);
 
-    if ([username, email, password].some((field) => !field || (typeof field !== string) || (field?.trim() === "")))
+    if ([username, email, password].some((field) => field == ""))
         return response(res, 400, { message: "All fields are required and must be strings!" });
 
     const existingUser = await User.findOne({
@@ -28,7 +31,7 @@ export const registerUser = async (req, res) => {
         const user = await User.create({
             username: username.toLowerCase(),
             email: email,
-            passord: password
+            password: password
         })
     
         createdUser = await User.findById(user._id).select("-password -refreshToken");
@@ -48,3 +51,52 @@ export const registerUser = async (req, res) => {
         }
     );
 }
+
+export const loginUser = async (req, res) => {
+    // Get login details
+    // Validate the fields
+    // Find the user
+    // Check password
+    // Create Refresh and Access Tokens
+    // Send cookies
+
+    const cleanInput = value => typeof value === "string" ? value.trim() : "";
+    const usernameOrEmail = cleanInput(req.body.usernameOrEmail).toLowerCase();
+    const password = cleanInput(req.body.password);
+
+    if ([ usernameOrEmail, password ].some(field => field == ""))
+        return response(res, 400, { message: "All fields are required and must be strings!" });
+
+    const user = await User.findOne({
+        $or: [ { username: usernameOrEmail }, { email: usernameOrEmail } ]
+    });
+
+    if (!user)
+        return response(res, 404, { message: "User doesn't exist" });
+
+    const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if (!isPasswordValid)
+        return response(res, 409, { message: "Incorrect Password" });
+
+    const accessToken = await user.createAccessToken();
+    const refreshToken = await user.createRefreshToken();
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        {
+            message: "User logged in successfully!",
+            user: loggedInUser, accessToken, refreshToken
+        }
+    );
+};
